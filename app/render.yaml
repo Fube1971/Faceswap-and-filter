@@ -1,10 +1,7 @@
 services:
   - type: web
-    name: faceswapgame
+    name: faceswap-insightface
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
-    envVars:
-      - key: REPLICATE_API_TOKEN
-        value: TU_API_KEY_PRIVADA_DE_REPLICATE
