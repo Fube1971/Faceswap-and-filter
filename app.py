@@ -81,50 +81,68 @@ swapper = get_model("inswapper_128.onnx", providers=["CPUExecutionProvider"])
 
 @app.route('/')
 def index():
-    return "✅ Memento Quis Style Server Online"
+    return "✅ InsightFace + Filtros Server Online"
 
 @app.route('/procesar', methods=['POST'])
 def procesar():
-    # 1) Verificar que ambas imágenes llegaron
-    if 'image' not in request.files or 'base' not in request.files:
-        return "Faltan archivos 'image' o 'base'", 400
+    # Verificar que la “base” siempre llegue
+    if 'base' not in request.files:
+        return "Falta archivo 'base'", 400
 
-    # 2) Guardar temporalmente los archivos subidos
-    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as user_file, \
-         tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as base_file:
+    # El parámetro skip_swap puede venir en el form: “true” o no existir.
+    skip_swap = request.form.get('skip_swap', 'false').lower() == 'true'
 
-        user_file.write(request.files['image'].read())
+    # Guardar temporalmente base y opcionalmente “image” (foto del jugador)
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as base_file:
         base_file.write(request.files['base'].read())
-        user_file.flush()
         base_file.flush()
+        base_path = base_file.name
 
-    # 3) Leer imágenes desde disco
-    img_user = cv2.imread(user_file.name)
-    img_base = cv2.imread(base_file.name)
+        # Si no se salta el swap, validamos que ‘image’ exista
+        if not skip_swap:
+            if 'image' not in request.files:
+                return "Falta archivo 'image' para face-swap", 400
+            user_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+            user_file.write(request.files['image'].read())
+            user_file.flush()
+            user_path = user_file.name
+        else:
+            user_path = None
 
-    # 4) Detectar caras en ambas imágenes
-    faces_user = face_app.get(img_user)
-    faces_base = face_app.get(img_base)
+    # Leer la imagen base con OpenCV
+    img_base = cv2.imread(base_path)
+    if img_base is None:
+        return "Error al leer la imagen base", 500
 
-    if not faces_user or not faces_base:
-        return "No se detectaron suficientes caras", 400
+    # Si skip_swap==false, hacemos face-swap (con “image”)
+    if not skip_swap:
+        img_user = cv2.imread(user_path)
+        if img_user is None:
+            return "Error al leer la imagen 'image'", 500
 
-    # 5) Hacer face-swap: incrustar cara del jugador en la imagen base
-    swapped = swapper.get(img_base, faces_base[0], faces_user[0], paste_back=True)
+        faces_user = face_app.get(img_user)
+        faces_base = face_app.get(img_base)
+        if not faces_user or not faces_base:
+            return "No se detectaron suficientes caras para face-swap", 400
 
-    # 6) (Opcional) Aplicar filtro anime/cartoon
-    anime_img = aplicar_estilo_anime(swapped)
+        swapped = swapper.get(img_base, faces_base[0], faces_user[0], paste_back=True)
+        working_img = swapped
+    else:
+        # Modo “solo filtros”: sin face-swap, partimos de la base original
+        working_img = img_base
 
-    # 7) Aplicar color grading terroso/pictórico
-    terroso = aplicar_color_terroso(anime_img)
+    # Aplicar filtro “anime/cartoon” (opcional)
+    working_img = aplicar_estilo_anime(working_img)
 
-    # 8) Aplicar textura de lienzo (grano)
-    final_img = aplicar_textura_lienzo(terroso, intensidad=0.15)
+    # Aplicar color grading terroso
+    working_img = aplicar_color_terroso(working_img)
 
-    # 9) Codificar como JPEG y devolver la imagen final
+    # Aplicar textura de lienzo/grano
+    final_img = aplicar_textura_lienzo(working_img, intensidad=0.15)
+
+    # Codificar y devolver la imagen final
     _, buffer = cv2.imencode(".jpg", final_img)
     return send_file(BytesIO(buffer), mimetype='image/jpeg')
 
 if __name__ == '__main__':
-    # En producción usarás gunicorn; debug=True sólo para pruebas locales
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
