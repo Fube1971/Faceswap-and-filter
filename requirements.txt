@@ -3,9 +3,3 @@ insightface
 onnxruntime
 opencv-python-headless
 gunicorn
-
-# Añadimos explícitamente torch+cpu y torchvision+cpu usando el índice oficial
-torch==2.0.1+cpu
-torchvision==0.15.2+cpu
-
-animegan2_pytorch
