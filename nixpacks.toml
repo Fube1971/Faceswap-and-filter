@@ -3,8 +3,12 @@ nixPkgs = ["python311", "gcc", "curl"]
 
 [phases.build]
 cmds = [
+  "pip install --upgrade pip",
+  # Aquí instalamos primero torch+cpu y torchvision+cpu desde PyPI oficial
+  "pip install torch==2.0.1+cpu torchvision==0.15.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu",
+  # Luego el resto de dependencias (incluyendo animegan2_pytorch)
   "pip install -r requirements.txt",
-  "pip install animegan2_pytorch",
+  # Descarga del modelo ONNX
   "curl -L https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx -o inswapper_128.onnx"
 ]
 
