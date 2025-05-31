@@ -85,20 +85,20 @@ def index():
 
 @app.route('/procesar', methods=['POST'])
 def procesar():
-    # Verificar que la “base” siempre llegue
+    # 1) Verificar que la “base” siempre llegue
     if 'base' not in request.files:
         return "Falta archivo 'base'", 400
 
-    # El parámetro skip_swap puede venir en el form: “true” o no existir.
+    # El parámetro skip_swap: "true" o "false" (por defecto false)
     skip_swap = request.form.get('skip_swap', 'false').lower() == 'true'
 
-    # Guardar temporalmente base y opcionalmente “image” (foto del jugador)
+    # 2) Guardar archivo base (necesario para validar tamaño, aunque no se use si skip_swap)
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as base_file:
         base_file.write(request.files['base'].read())
         base_file.flush()
         base_path = base_file.name
 
-        # Si no se salta el swap, validamos que ‘image’ exista
+        # Si NO skip_swap, debemos leer también 'image'
         if not skip_swap:
             if 'image' not in request.files:
                 return "Falta archivo 'image' para face-swap", 400
@@ -107,14 +107,20 @@ def procesar():
             user_file.flush()
             user_path = user_file.name
         else:
-            user_path = None
+            # En skip_swap sí se debe leer la foto enviada en 'image'
+            if 'image' not in request.files:
+                return "Falta archivo 'image' para aplicar filtros", 400
+            user_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+            user_file.write(request.files['image'].read())
+            user_file.flush()
+            user_path = user_file.name
 
-    # Leer la imagen base con OpenCV
+    # 3) Leer la imagen base con OpenCV
     img_base = cv2.imread(base_path)
     if img_base is None:
         return "Error al leer la imagen base", 500
 
-    # Si skip_swap==false, hacemos face-swap (con “image”)
+    # 4) Si no skip_swap, hacemos face-swap
     if not skip_swap:
         img_user = cv2.imread(user_path)
         if img_user is None:
@@ -127,22 +133,23 @@ def procesar():
 
         swapped = swapper.get(img_base, faces_base[0], faces_user[0], paste_back=True)
         working_img = swapped
+
     else:
-        # Modo “solo filtros”: sin face-swap, partimos de la base original
-        working_img = img_base
+        # 5) skip_swap == true → procesar img_user (foto del celular) sin swap
+        img_user = cv2.imread(user_path)
+        if img_user is None:
+            return "Error al leer la imagen 'image'", 500
+        working_img = img_user
 
-    # Aplicar filtro “anime/cartoon” (opcional)
+    # 6) Aplicar pipeline de filtros sobre working_img
     working_img = aplicar_estilo_anime(working_img)
-
-    # Aplicar color grading terroso
     working_img = aplicar_color_terroso(working_img)
-
-    # Aplicar textura de lienzo/grano
     final_img = aplicar_textura_lienzo(working_img, intensidad=0.15)
 
-    # Codificar y devolver la imagen final
+    # 7) Codificar y devolver la imagen final
     _, buffer = cv2.imencode(".jpg", final_img)
     return send_file(BytesIO(buffer), mimetype='image/jpeg')
 
 if __name__ == '__main__':
+    # En producción se usa gunicorn; debug=True solo para pruebas locales
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
