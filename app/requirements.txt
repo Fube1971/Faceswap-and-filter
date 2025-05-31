@@ -1,4 +1,5 @@
-fastapi
-uvicorn[standard]
-pillow
-python-multipart     # ← esta es la que falta
+flask
+opencv-python
+face_recognition
+numpy
+  # ← esta es la que falta
