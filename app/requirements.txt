@@ -2,3 +2,4 @@ flask
 insightface
 onnxruntime
 opencv-python-headless
+gunicorn
