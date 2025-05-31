@@ -29,14 +29,18 @@ def procesar():
 
     # Ejecutar modelo
     output = replicate.run(
-        "zsxkib/instant-id",
-        input={
-            "image": open(base_file.name, "rb"),
-            "input_image": open(user_file.name, "rb"),
-            "enhance_definitions": True,
-            "prompt": "fotografía realista"
+    "zsxkib/instant-id:2e4785a4d80dadf580077b2244c8d7c05d8e3faac04a04c02d8e099dd2876789",
+    input={
+        "image": open(base_file.name, "rb"),         # Imagen del banco
+        "pose_image": open(user_file.name, "rb"),    # Foto del jugador
+        "prompt": "realistic face swap",             # Puedes personalizar esto
+        "guidance_scale": 5,
+        "sdxl_weights": "protovision-xl-high-fidel",
+        "enhance_definitions": True,
+        "negative_prompt": "(lowres, glitch, watermark)"
         }
     )
+
 
     if not output:
         return "Error al generar imagen", 500
