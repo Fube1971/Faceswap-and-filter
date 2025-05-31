@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: facefusion-server
+    name: faceswapgame
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: REPLICATE_API_TOKEN
-        value: TU_TOKEN_PRIVADO
+        value: TU_API_KEY_PRIVADA_DE_REPLICATE
