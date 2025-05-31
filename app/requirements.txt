@@ -1,5 +1,4 @@
 flask
-opencv-python
-face_recognition
+opencv-python-headless
+mediapipe
 numpy
-  # ← esta es la que falta
