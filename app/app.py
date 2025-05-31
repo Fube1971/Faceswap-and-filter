@@ -10,14 +10,13 @@ from insightface.model_zoo import get_model
 
 app = Flask(__name__)
 
-# Preparar analizador de rostros y modelo de intercambio
 face_app = FaceAnalysis(name="buffalo_l")
 face_app.prepare(ctx_id=0)
 swapper = get_model("inswapper_128.onnx", providers=["CPUExecutionProvider"])
 
 @app.route('/')
 def index():
-    return "✅ InsightFace FaceSwap Server Ready"
+    return "✅ InsightFace Server Online"
 
 @app.route('/procesar', methods=['POST'])
 def procesar():
@@ -29,7 +28,6 @@ def procesar():
 
         user_file.write(request.files['image'].read())
         base_file.write(request.files['base'].read())
-
         user_file.flush()
         base_file.flush()
 
@@ -42,7 +40,6 @@ def procesar():
     if not faces_user or not faces_base:
         return "No se detectaron suficientes caras", 400
 
-    # Realiza el face swap de la cara del jugador en la imagen base
     swapped = swapper.get(img_base, faces_base[0], faces_user[0], paste_back=True)
 
     _, buffer = cv2.imencode(".jpg", swapped)
