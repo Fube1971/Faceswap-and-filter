@@ -1,4 +1,3 @@
-echo -e "fastapi\nuvicorn[standard]\npillow" > requirements.txt
-git add requirements.txt
-git commit -m "Add requirements"
-git push
+fastapi
+uvicorn[standard]
+pillow
