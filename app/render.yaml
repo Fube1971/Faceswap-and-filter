@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: face-swap-server
+    name: facefusion-server
     runtime: python
-    plan: free  # Puedes ajustar el plan si lo deseas
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.14
+      - key: REPLICATE_API_TOKEN
+        value: TU_TOKEN_PRIVADO
