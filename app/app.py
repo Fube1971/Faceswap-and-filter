@@ -52,7 +52,10 @@ def procesar():
     except replicate.exceptions.ReplicateError as e:
         return f"Error de Replicate: {str(e)}", 500
     except Exception as e:
-        return f"Error general: {str(e)}", 500
+    import traceback
+    print("💥 Error general:", traceback.format_exc())
+    return f"Error general: {str(e)}", 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
