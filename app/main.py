@@ -1,13 +1,47 @@
 from flask import Flask, request, send_file
 import cv2
 import numpy as np
-import face_recognition
+import mediapipe as mp
 from io import BytesIO
 
 app = Flask(__name__)
 
-# Imagen guardada en servidor para intercambio de cara
-TARGET_IMAGE_PATH = "target_face.jpg"  # Debes poner aquí la imagen con la cara a poner
+TARGET_IMAGE_PATH = "target_face.jpg"  # imagen con cara objetivo
+
+mp_face_detection = mp.solutions.face_detection
+mp_drawing = mp.solutions.drawing_utils
+
+def swap_face(source_img, target_img):
+    with mp_face_detection.FaceDetection(min_detection_confidence=0.5) as face_detection:
+        source_results = face_detection.process(cv2.cvtColor(source_img, cv2.COLOR_BGR2RGB))
+        target_results = face_detection.process(cv2.cvtColor(target_img, cv2.COLOR_BGR2RGB))
+
+        if not source_results.detections or not target_results.detections:
+            return None
+
+        # Obtener cajas delimitadoras
+        source_box = source_results.detections[0].location_data.relative_bounding_box
+        target_box = target_results.detections[0].location_data.relative_bounding_box
+
+        # Obtener dimensiones reales
+        h_src, w_src, _ = source_img.shape
+        h_tgt, w_tgt, _ = target_img.shape
+
+        # Coordenadas reales
+        x_src, y_src = int(source_box.xmin * w_src), int(source_box.ymin * h_src)
+        w_src_box, h_src_box = int(source_box.width * w_src), int(source_box.height * h_src)
+
+        x_tgt, y_tgt = int(target_box.xmin * w_tgt), int(target_box.ymin * h_tgt)
+        w_tgt_box, h_tgt_box = int(target_box.width * w_tgt), int(target_box.height * h_tgt)
+
+        # Recortar caras
+        face_tgt_crop = target_img[y_tgt:y_tgt+h_tgt_box, x_tgt:x_tgt+w_tgt_box]
+        face_tgt_resized = cv2.resize(face_tgt_crop, (w_src_box, h_src_box))
+
+        # Intercambiar la cara
+        source_img[y_src:y_src+h_src_box, x_src:x_src+w_src_box] = face_tgt_resized
+
+        return source_img
 
 @app.route('/procesar', methods=['POST'])
 def procesar_imagen():
@@ -16,37 +50,14 @@ def procesar_imagen():
 
     file = request.files['image']
     img_bytes = np.frombuffer(file.read(), np.uint8)
-    img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+    source_img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+    target_img = cv2.imread(TARGET_IMAGE_PATH)
 
-    target_img = face_recognition.load_image_file(TARGET_IMAGE_PATH)
-
-    # Detección de caras
-    source_faces = face_recognition.face_locations(img)
-    target_faces = face_recognition.face_locations(target_img)
-
-    if not source_faces or not target_faces:
+    output_img = swap_face(source_img, target_img)
+    if output_img is None:
         return 'No se detectaron suficientes caras', 400
 
-    source_face_encoding = face_recognition.face_encodings(img, source_faces)[0]
-    target_face_encoding = face_recognition.face_encodings(target_img, target_faces)[0]
-
-    # Intercambio básico de caras usando landmark points
-    source_landmarks = face_recognition.face_landmarks(img)[0]
-    target_landmarks = face_recognition.face_landmarks(target_img)[0]
-
-    # Simplemente copiamos la cara del target al source (ejemplo básico)
-    x1, y1, x2, y2 = source_faces[0][3], source_faces[0][0], source_faces[0][1], source_faces[0][2]
-    face_width, face_height = x2 - x1, y2 - y1
-
-    target_x1, target_y1, target_x2, target_y2 = target_faces[0][3], target_faces[0][0], target_faces[0][1], target_faces[0][2]
-    target_face = target_img[target_y1:target_y2, target_x1:target_x2]
-
-    target_face_resized = cv2.resize(target_face, (face_width, face_height))
-
-    img[y1:y2, x1:x2] = target_face_resized
-
-    # Codifica la imagen a JPEG y devuelve
-    _, buffer = cv2.imencode('.jpg', img)
+    _, buffer = cv2.imencode('.jpg', output_img)
     io_buf = BytesIO(buffer)
 
     return send_file(io_buf, mimetype='image/jpeg')
