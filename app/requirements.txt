@@ -1,4 +1,4 @@
 flask
-replicate
-requests
-gunicorn
+insightface
+onnxruntime
+opencv-python-headless
