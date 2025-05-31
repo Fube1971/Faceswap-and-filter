@@ -3,3 +3,5 @@ insightface
 onnxruntime
 opencv-python-headless
 gunicorn
+animegan2_pytorch
+
