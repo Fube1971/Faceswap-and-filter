@@ -1,10 +1,10 @@
 [phases.setup]
-nixPkgs = ["python311", "gcc"]
+nixPkgs = ["python311", "gcc", "curl"]
 
 [phases.build]
 cmds = [
   "pip install -r requirements.txt",
-  "wget https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx -O inswapper_128.onnx"
+  "curl -L https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx -o inswapper_128.onnx"
 ]
 
 [start]
