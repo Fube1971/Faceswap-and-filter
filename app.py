@@ -11,7 +11,7 @@ from insightface.model_zoo import get_model
 app = Flask(__name__)
 
 # ------------------------------------------------------
-# 1) Función “anime/cartoon” (opcional)
+# 1) Función “artoon” 
 # ------------------------------------------------------
 def aplicar_estilo_anime(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -30,7 +30,7 @@ def aplicar_estilo_anime(img):
     return cartoon
 
 # ------------------------------------------------------
-# 2) Función “color grading terroso/pictórico”
+# 2) Función “color grading pictórico”
 # ------------------------------------------------------
 def aplicar_color_terroso(img):
     # Convertir a float [0,1]
@@ -50,7 +50,7 @@ def aplicar_color_terroso(img):
     return img_painted
 
 # ------------------------------------------------------
-# 3) Función “textura de lienzo/grano”
+# 3) Función “textura de grano”
 # ------------------------------------------------------
 def aplicar_textura_lienzo(img, intensidad=0.15):
     h, w, _ = img.shape
